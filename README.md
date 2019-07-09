@@ -1,0 +1,1 @@
+# arm-template-sample-for-serverless
