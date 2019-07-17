@@ -1,0 +1,101 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "0.1.0.0",
+  "parameters": {
+    "projectName": {
+      "type": "string"
+    },
+    "appServicePlanSku": {
+      "type": "string",
+      "defaultValue": "F1",
+      "allowedValues": [
+        "F1",
+        "D1",
+        "B1",
+        "B2",
+        "B3",
+        "S1",
+        "P1V2",
+        "P2V2",
+        "P3V2",
+        "PC2",
+        "PC3",
+        "PC4",
+        "S1",
+        "S2",
+        "S3"
+      ]
+    }
+  },
+  "variables": {
+    "location": "[resourceGroup().location]",
+  },
+  "resources": [
+    {
+      "name": "sharedResources",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-05-01",
+      "location": "[variables('location')]",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[uri(deployment().properties.templateLink.uri, 'common-resources.json')]",
+          "contentVersion": "0.1.0.0"
+        },
+        "parameters": {}
+      }
+    },
+    {
+      "name": "setterResources",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-05-01",
+      "location": "[variables('location')]",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[uri(deployment().properties.templateLink.uri, 'setter-resources.json')]",
+          "contentVersion": "0.1.0.0"
+        },
+        "parameters": {}
+      }
+    },
+    {
+      "name": "[concat('getterResources', copyIndex())]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-05-01",
+      "location": "[variables('location')]",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[uri(deployment().properties.templateLink.uri, 'getter-resources.json')]",
+          "contentVersion": "0.1.0.0"
+        },
+        "parameters": {
+          "index": {
+            "value": "[copyIndex()]"
+          }
+        }
+      },
+      "copy": {
+        "name": "increaseGetterResources",
+        "count": 2,
+        "mode": "Parallel"
+      }
+    },
+    {
+      "name": "postConfiguration",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-05-01",
+      "location": "[variables('location')]",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[uri(deployment().properties.templateLink.uri, 'post-configuration.json')]",
+          "contentVersion": "0.1.0.0"
+        },
+        "parameters": {}
+      }
+    }
+  ],
+  "outputs": {  }
+}
