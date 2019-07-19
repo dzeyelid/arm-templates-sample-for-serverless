@@ -5,6 +5,14 @@
     "projectName": {
       "type": "string"
     },
+    "keyVaultSku": {
+      "type": "string",
+      "defaultValue": "standard",
+      "allowedValues": [
+        "premium",
+        "standard"
+      ]
+    },
     "appServicePlanSku": {
       "type": "string",
       "defaultValue": "F1",
@@ -28,7 +36,7 @@
     }
   },
   "variables": {
-    "location": "[resourceGroup().location]",
+    "location": "[resourceGroup().location]"
   },
   "resources": [
     {
@@ -42,7 +50,14 @@
           "uri": "[uri(deployment().properties.templateLink.uri, 'common-resources.json')]",
           "contentVersion": "0.1.0.0"
         },
-        "parameters": {}
+        "parameters": {
+          "projectName": {
+            "value": "[parameters('projectName')]"
+          },
+          "keyVault": {
+            "value": "[parameters('keyVaultSku')]"
+          }
+        }
       }
     },
     {
@@ -56,7 +71,11 @@
           "uri": "[uri(deployment().properties.templateLink.uri, 'setter-resources.json')]",
           "contentVersion": "0.1.0.0"
         },
-        "parameters": {}
+        "parameters": {
+          "projectName": {
+            "value": "[parameters('projectName')]"
+          }
+        }
       }
     },
     {
@@ -71,6 +90,9 @@
           "contentVersion": "0.1.0.0"
         },
         "parameters": {
+          "projectName": {
+            "value": "[parameters('projectName')]"
+          },
           "index": {
             "value": "[copyIndex()]"
           }
