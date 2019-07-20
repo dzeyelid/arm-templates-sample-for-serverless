@@ -1,0 +1,29 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "0.1.0.0",
+  "parameters": {
+    "projectName": {
+      "type": "string"
+    },
+    "appServicePlanResourceId": {
+      "type": "string"
+    }
+  },
+  "variables": {
+    "location": "[if(contains(deployment(), 'location'), deployment().location, resourceGroup().location)]",
+    "functionName": "[concat(parameters('projectName'), '-setter')]"
+  },
+  "resources": [
+    {
+      "name": "[variables('functionName')]",
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2018-11-01",
+      "kind": "functionapp",
+      "location": "[variables('location')]",
+      "properties": {
+        "serverFarmId": "[parameters('appServicePlanResourceId')]"
+      }
+    }
+  ],
+  "outputs": {}
+}

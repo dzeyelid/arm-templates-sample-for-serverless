@@ -13,6 +13,18 @@
         "standard"
       ]
     },
+    "keyVaultDefaultAccessPolicy": {
+      "type": "object",
+      "metadata": {
+        "description": "Set an object like {\"tenantId\": <TENANT ID>, \"objectId\": <OBJECT ID>}."
+      }
+    },
+    "keyVaultDefaultSecret": {
+      "type": "secureObject",
+      "metadata": {
+        "description": "Set an object like {\"name\": <SECRET NAME>, \"value\": <SECRET VALUE>}."
+      }
+    },
     "appServicePlanSku": {
       "type": "string",
       "defaultValue": "F1",
@@ -36,26 +48,34 @@
     }
   },
   "variables": {
-    "location": "[resourceGroup().location]"
+    "location": "[if(contains(deployment(), 'location'), deployment().location, resourceGroup().location)]"
   },
   "resources": [
     {
       "name": "sharedResources",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2019-05-01",
-      "location": "[variables('location')]",
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[uri(deployment().properties.templateLink.uri, 'common-resources.json')]",
+          "uri": "[uri(deployment().properties.templateLink.uri, 'shared-resources.json')]",
           "contentVersion": "0.1.0.0"
         },
         "parameters": {
           "projectName": {
             "value": "[parameters('projectName')]"
           },
-          "keyVault": {
+          "keyVaultSku": {
             "value": "[parameters('keyVaultSku')]"
+          },
+          "keyVaultDefaultAccessPolicy": {
+            "value": "[parameters('keyVaultDefaultAccessPolicy')]"
+          },
+          "keyVaultDefaultSecret": {
+            "value": "[parameters('keyVaultDefaultSecret')]"
+          },
+          "appServicePlanSku": {
+            "value": "[parameters('appServicePlanSku')]"
           }
         }
       }
@@ -64,7 +84,6 @@
       "name": "setterResources",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2019-05-01",
-      "location": "[variables('location')]",
       "properties": {
         "mode": "Incremental",
         "templateLink": {
@@ -74,15 +93,20 @@
         "parameters": {
           "projectName": {
             "value": "[parameters('projectName')]"
+          },
+          "appServicePlanResourceId": {
+            "value": "[reference('sharedResources').outputs.appServicePlanResourceId.value]"
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'sharedResources')]"
+      ]
     },
     {
-      "name": "[concat('getterResources', copyIndex())]",
+      "name": "getterResources",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2019-05-01",
-      "location": "[variables('location')]",
       "properties": {
         "mode": "Incremental",
         "templateLink": {
@@ -93,31 +117,56 @@
           "projectName": {
             "value": "[parameters('projectName')]"
           },
-          "index": {
-            "value": "[copyIndex()]"
+          "sharedResources": {
+            "value": "[reference('sharedResources').outputs]"
           }
         }
       },
-      "copy": {
-        "name": "increaseGetterResources",
-        "count": 2,
-        "mode": "Parallel"
-      }
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'sharedResources')]"
+      ]
     },
     {
       "name": "postConfiguration",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2019-05-01",
-      "location": "[variables('location')]",
       "properties": {
         "mode": "Incremental",
         "templateLink": {
           "uri": "[uri(deployment().properties.templateLink.uri, 'post-configuration.json')]",
           "contentVersion": "0.1.0.0"
         },
-        "parameters": {}
-      }
+        "parameters": {
+          "projectName": {
+            "value": "[parameters('projectName')]"
+          },
+          "sharedResources": {
+            "value": "[reference('sharedResources').outputs]"
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'setterResources')]",
+        "[resourceId('Microsoft.Resources/deployments', 'getterResources')]"
+      ]
     }
   ],
-  "outputs": {  }
+  "outputs": {
+    "sharedResources": {
+      "type": "object",
+      "value": "[reference('sharedResources').outputs]"
+    },
+    "setterResources": {
+      "type": "object",
+      "value": "[reference('setterResources').outputs]"
+    },
+    "getterResources": {
+      "type": "object",
+      "value": "[reference('getterResources').outputs]"
+    },
+    "postConfiguration": {
+      "type": "object",
+      "value": "[reference('postConfiguration').outputs]"
+    }
+  }
 }
