@@ -27,9 +27,8 @@
     },
     "appServicePlanSku": {
       "type": "string",
-      "defaultValue": "F1",
+      "defaultValue": "B1",
       "allowedValues": [
-        "F1",
         "D1",
         "B1",
         "B2",
@@ -44,7 +43,10 @@
         "S1",
         "S2",
         "S3"
-      ]
+      ],
+      "metadata": {
+        "description": "In case of App Service on Linux, you cannot choose Free plan."
+      }
     }
   },
   "variables": {
@@ -68,12 +70,14 @@
       "name": "[variables('appServicePlanName')]",
       "type": "Microsoft.Web/serverfarms",
       "apiVersion": "2018-02-01",
-      "kind": "functionapp,linux",
+      "kind": "linux",
       "location": "[variables('location')]",
       "sku": {
         "name": "[parameters('appServicePlanSku')]"
       },
-      "properties": {}
+      "properties": {
+        "reserved": true
+      }
     },
     {
       "name": "[variables('keyVaultName')]",
@@ -113,10 +117,17 @@
       "copy": {
         "name": "keyVaultSecretsCopy",
         "count": "[length(variables('keyVaultSecretsAll'))]"
-      }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
     }
   ],
   "outputs": {
+    "keyVaultName": {
+      "type": "string",
+      "value": "[variables('keyVaultName')]"
+    },
     "keyVaultResourceId": {
       "type": "string",
       "value": "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"

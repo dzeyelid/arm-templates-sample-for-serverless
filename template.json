@@ -27,9 +27,8 @@
     },
     "appServicePlanSku": {
       "type": "string",
-      "defaultValue": "F1",
+      "defaultValue": "B1",
       "allowedValues": [
-        "F1",
         "D1",
         "B1",
         "B2",
@@ -44,6 +43,23 @@
         "S1",
         "S2",
         "S3"
+      ],
+      "metadata": {
+        "description": "In case of App Service on Linux, you cannot choose Free plan."
+      }
+    },
+    "storageAccountSku": {
+      "type": "string",
+      "defaultValue": "Standard_LRS",
+      "allowedValues": [
+        "Standard_LRS",
+        "Standard_GRS",
+        "Standard_RAGRS",
+        "Standard_ZRS",
+        "Premium_LRS",
+        "Premium_ZRS",
+        "Standard_GZRS",
+        "Standard_RAGZRS"
       ]
     }
   },
@@ -94,8 +110,14 @@
           "projectName": {
             "value": "[parameters('projectName')]"
           },
+          "storageAccountSku": {
+            "value": "[parameters('storageAccountSku')]"
+          },
           "appServicePlanResourceId": {
             "value": "[reference('sharedResources').outputs.appServicePlanResourceId.value]"
+          },
+          "keyVaultName": {
+            "value": "[reference('sharedResources').outputs.keyVaultName.value]"
           }
         }
       },
@@ -137,11 +159,11 @@
           "contentVersion": "0.1.0.0"
         },
         "parameters": {
-          "projectName": {
-            "value": "[parameters('projectName')]"
+          "keyVaultName": {
+            "value": "[reference('sharedResources').outputs.keyVaultName.value]"
           },
-          "sharedResources": {
-            "value": "[reference('sharedResources').outputs]"
+          "setterFunction": {
+            "value": "[reference('setterResources').outputs.function.value]"
           }
         }
       },

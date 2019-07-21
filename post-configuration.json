@@ -2,18 +2,33 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "0.1.0.0",
   "parameters": {
-    "projectName": {
+    "keyVaultName": {
       "type": "string"
     },
-    "sharedResources": {
+    "setterFunction": {
       "type": "object"
     }
   },
-  "resources": [],
-  "outputs": {
-    "sharedResources": {
-      "type": "object",
-      "value": "[parameters('sharedResources')]"
+  "resources": [
+    {
+      "name": "[concat(parameters('keyVaultName'), '/add')]",
+      "type": "Microsoft.KeyVault/vaults/accessPolicies",
+      "apiVersion": "2018-02-14",
+      "properties": {
+        "accessPolicies": [
+          {
+            "tenantId": "[parameters('setterFunction').identity.tenantId]",
+            "objectId": "[parameters('setterFunction').identity.principalId]",
+            "permissions": {
+              "secrets": [
+                "all"
+              ]
+            }
+          }
+        ]
+      }
     }
+  ],
+  "outputs": {
   }
 }
