@@ -20,5 +20,4 @@ az group deployment create \
         projectName=$PROJECT_NAME \
         keyVaultDefaultAccessPolicy="{\"tenantId\": \"$TENANT_ID\", \"objectId\": \"$OBJECT_ID\"}" \
         keyVaultDefaultSecret="{\"name\": \"default\", \"value\": \"This is default value\"}" \
-    --debug
 ```
