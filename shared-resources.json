@@ -1,0 +1,140 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "0.1.0.0",
+  "parameters": {
+    "projectName": {
+      "type": "string"
+    },
+    "keyVaultSku": {
+      "type": "string",
+      "defaultValue": "standard",
+      "allowedValues": [
+        "premium",
+        "standard"
+      ]
+    },
+    "keyVaultDefaultAccessPolicy": {
+      "type": "object",
+      "metadata": {
+        "description": "Set object like {\"tenantId\": <TENANT ID>, \"objectId\": <OBJECT ID>}."
+      }
+    },
+    "keyVaultDefaultSecret": {
+      "type": "secureObject",
+      "metadata": {
+        "description": "Set an object like {\"name\": <SECRET NAME>, \"value\": <SECRET VALUE>}."
+      }
+    },
+    "appServicePlanSku": {
+      "type": "string",
+      "defaultValue": "B1",
+      "allowedValues": [
+        "D1",
+        "B1",
+        "B2",
+        "B3",
+        "S1",
+        "P1V2",
+        "P2V2",
+        "P3V2",
+        "PC2",
+        "PC3",
+        "PC4",
+        "S1",
+        "S2",
+        "S3"
+      ],
+      "metadata": {
+        "description": "In case of App Service on Linux, you cannot choose Free plan."
+      }
+    }
+  },
+  "variables": {
+    "location": "[if(contains(deployment(), 'location'), deployment().location, resourceGroup().location)]",
+    "appServicePlanName": "[concat(parameters('projectName'), '-plan')]",
+    "keyVaultName": "[concat(parameters('projectName'), '-keyvault')]",
+    "copy": [
+      {
+        "name": "keyVaultSecrets",
+        "count": 2,
+        "input": {
+          "name": "[concat('secretName', copyIndex('keyVaultSecrets'))]",
+          "value": "[concat('secretValue', copyIndex('keyVaultSecrets'))]"
+        }
+      }
+    ],
+    "keyVaultSecretsAll": "[union(variables('keyVaultSecrets'), array(parameters('keyVaultDefaultSecret')))]"
+  },
+  "resources": [
+    {
+      "name": "[variables('appServicePlanName')]",
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2018-02-01",
+      "kind": "linux",
+      "location": "[variables('location')]",
+      "sku": {
+        "name": "[parameters('appServicePlanSku')]"
+      },
+      "properties": {
+        "reserved": true
+      }
+    },
+    {
+      "name": "[variables('keyVaultName')]",
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2018-02-14",
+      "location": "[variables('location')]",
+      "properties": {
+        "tenantId": "[subscription().tenantId]",
+        "sku": {
+          "family": "A",
+          "name": "[parameters('keyVaultSku')]"
+        },
+        "accessPolicies": [
+          {
+            "tenantId": "[parameters('keyVaultDefaultAccessPolicy').tenantId]",
+            "objectId": "[parameters('keyVaultDefaultAccessPolicy').objectId]",
+            "permissions": {
+              "keys": [
+                "all"
+              ],
+              "secrets": [
+                "all"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "comments": "Define secrets at top-level not child, because coping nested resources is not supposed.",
+      "name": "[concat(variables('keyVaultName'), '/', variables('keyVaultSecretsAll')[copyIndex('keyVaultSecretsCopy')].name)]",
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2018-02-14",
+      "properties": {
+        "value": "[variables('keyVaultSecretsAll')[copyIndex('keyVaultSecretsCopy')].value]"
+      },
+      "copy": {
+        "name": "keyVaultSecretsCopy",
+        "count": "[length(variables('keyVaultSecretsAll'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "keyVaultName": {
+      "type": "string",
+      "value": "[variables('keyVaultName')]"
+    },
+    "keyVaultResourceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+    },
+    "appServicePlanResourceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]"
+    }
+  }
+}
