@@ -14,15 +14,15 @@
       ]
     },
     "keyVaultDefaultAccessPolicy": {
-      "type": "object",
+      "type": "secureObject",
       "metadata": {
-        "description": "Set an object like {\"tenantId\": &lt;TENANT ID&gt;, \"objectId\": &lt;OBJECT ID&gt;}."
+        "description": "Set an object like {\"tenantId\": \"&lt;TENANT ID&gt;\", \"objectId\": \"&lt;OBJECT ID&gt;\"}."
       }
     },
     "keyVaultDefaultSecret": {
       "type": "secureObject",
       "metadata": {
-        "description": "Set an object like {\"name\": &lt;SECRET NAME&gt;, \"value\": &lt;SECRET VALUE&gt;}."
+        "description": "Set an object like {\"name\": \"&lt;SECRET NAME&gt;\", \"value\": \"&lt;SECRET VALUE&gt;\"}."
       }
     },
     "appServicePlanSku": {
