@@ -16,13 +16,13 @@
     "keyVaultDefaultAccessPolicy": {
       "type": "object",
       "metadata": {
-        "description": "Set an object like {\"tenantId\": <TENANT ID>, \"objectId\": <OBJECT ID>}."
+        "description": "Set an object like {\"tenantId\": &lt;TENANT ID&lt;, \"objectId\": &lt;OBJECT ID&lt;}."
       }
     },
     "keyVaultDefaultSecret": {
       "type": "secureObject",
       "metadata": {
-        "description": "Set an object like {\"name\": <SECRET NAME>, \"value\": <SECRET VALUE>}."
+        "description": "Set an object like {\"name\": &lt;SECRET NAME&lt;, \"value\": &lt;SECRET VALUE&lt;}."
       }
     },
     "appServicePlanSku": {

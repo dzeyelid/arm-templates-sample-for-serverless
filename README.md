@@ -1,5 +1,7 @@
 # arm-template-sample-for-serverless
 
+## Getting started with Azure CLI
+
 ```bash
 TEMPLATE_URL="https://raw.githubusercontent.com/dzeyelid/arm-template-sample-for-serverless/master"
 
@@ -21,3 +23,9 @@ az group deployment create \
         keyVaultDefaultAccessPolicy="{\"tenantId\": \"$TENANT_ID\", \"objectId\": \"$OBJECT_ID\"}" \
         keyVaultDefaultSecret="{\"name\": \"default\", \"value\": \"This is default value\"}"
 ```
+
+## Getting started with Deploy button
+
+Click me! :)
+
+[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fdzeyelid%2Farm-template-sample-for-serverless%2Fmaster%2Ftemplate.json)
