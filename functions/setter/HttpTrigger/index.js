@@ -20,11 +20,10 @@ module.exports = async function (context, req) {
     const url = `https://${process.env.VAULT_NAME}.vault.azure.net`;
     const client = new SecretsClient(url, credential);
     try {
-        let result = await client.setSecret(key, value);
+        await client.setSecret(key, value);
         context.res = {
             body: {
-                success: true,
-                value: 'value' in result ? result.value : 'hidden',
+                success: true
             }
         }
     } catch (e) {
