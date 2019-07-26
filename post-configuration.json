@@ -7,7 +7,28 @@
     },
     "setterFunction": {
       "type": "object"
+    },
+    "getterFunction": {
+      "type": "object"
     }
+  },
+  "variables": {
+    "keyVaultSecrets": "[createArray(parameters('setterFunction'), parameters('getterFunction'))]",
+    "copy": [
+      {
+        "name": "keyVaultAccessPolicies",
+        "count": "[length(variables('keyVaultSecrets'))]",
+        "input": {
+          "tenantId": "[variables('keyVaultSecrets')[copyIndex('keyVaultAccessPolicies')].identity.tenantId]",
+          "objectId": "[variables('keyVaultSecrets')[copyIndex('keyVaultAccessPolicies')].identity.principalId]",
+          "permissions": {
+            "secrets": [
+              "all"
+            ]
+          }
+        }
+      }
+    ]
   },
   "resources": [
     {
@@ -15,17 +36,7 @@
       "type": "Microsoft.KeyVault/vaults/accessPolicies",
       "apiVersion": "2018-02-14",
       "properties": {
-        "accessPolicies": [
-          {
-            "tenantId": "[parameters('setterFunction').identity.tenantId]",
-            "objectId": "[parameters('setterFunction').identity.principalId]",
-            "permissions": {
-              "secrets": [
-                "all"
-              ]
-            }
-          }
-        ]
+        "accessPolicies": "[variables('keyVaultAccessPolicies')]"
       }
     }
   ],
