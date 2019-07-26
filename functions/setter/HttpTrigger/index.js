@@ -1,5 +1,5 @@
-const { ManagedIdentityCredential } = require("@azure/identity");
-const { SecretsClient, Secret } = require("@azure/keyvault-secrets");
+const { DefaultAzureCredential } = require("@azure/identity");
+const { SecretsClient } = require("@azure/keyvault-secrets");
 
 module.exports = async function (context, req) {
     context.log('JavaScript HTTP trigger function processed a request.');
@@ -13,24 +13,19 @@ module.exports = async function (context, req) {
         return;
     }
 
-    if (!process.env.APPSETTING_WEBSITE_SITE_NAME) {
-        const message = 'This function can be run only on Azure with Managed Identity.';
-        context.log(message);
-        context.res = {
-            status: 404,
-            body: message
-        }
-        return;
-    }
+    const key = req.query.key ? req.query.key : req.body.key;
+    const value = req.query.value ? req.query.value : req.body.value;
 
-    const key = req.query.key ? req.query.key : req.body.key;    
-    const value = req.query.value ? req.query.value : req.body.value;    
-
-    const credential = new ManagedIdentityCredential();
+    const credential = new DefaultAzureCredential();
     const url = `https://${process.env.VAULT_NAME}.vault.azure.net`;
-    const client = new SecretsClient(url, credential);    
+    const client = new SecretsClient(url, credential);
     try {
-        let result = await client.setSecret(key, value);
+        await client.setSecret(key, value);
+        context.res = {
+            body: {
+                success: true
+            }
+        }
     } catch (e) {
         context.res = {
             status: 500,
@@ -39,10 +34,5 @@ module.exports = async function (context, req) {
             }
         }
         return;
-    }
-    context.res = {
-        body: {
-            success: true
-        }
     }
 };

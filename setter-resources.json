@@ -30,7 +30,7 @@
     "location": "[if(contains(deployment(), 'location'), deployment().location, resourceGroup().location)]",
     "storageAccountName": "[uniqueString(resourceGroup().name)]",
     "functionName": "[concat(parameters('projectName'), '-setter')]",
-    "functionZipUrl": "https://github.com/dzeyelid/arm-template-sample-for-serverless/raw/develop/functions/archives/setter.zip"
+    "functionZipUrl": "https://github.com/dzeyelid/arm-template-sample-for-serverless/raw/master/functions/archives/setter.zip"
   },
   "resources": [
     {
