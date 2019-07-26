@@ -5,22 +5,11 @@
     "projectName": {
       "type": "string"
     },
-    "storageAccountSku": {
-      "type": "string",
-      "defaultValue": "Standard_LRS",
-      "allowedValues": [
-        "Standard_LRS",
-        "Standard_GRS",
-        "Standard_RAGRS",
-        "Standard_ZRS",
-        "Premium_LRS",
-        "Premium_ZRS",
-        "Standard_GZRS",
-        "Standard_RAGZRS"
-      ]
-    },
     "appServicePlanResourceId": {
       "type": "string"
+    },
+    "storageConnectionString": {
+      "type": "securestring"
     },
     "keyVaultName": {
       "type": "string"
@@ -28,24 +17,10 @@
   },
   "variables": {
     "location": "[if(contains(deployment(), 'location'), deployment().location, resourceGroup().location)]",
-    "storageAccountName": "[uniqueString(resourceGroup().name)]",
     "functionName": "[concat(parameters('projectName'), '-setter')]",
     "functionZipUrl": "https://github.com/dzeyelid/arm-template-sample-for-serverless/raw/master/functions/archives/setter.zip"
   },
   "resources": [
-    {
-      "name": "[variables('storageAccountName')]",
-      "type": "Microsoft.Storage/storageAccounts",
-      "apiVersion": "2019-04-01",
-      "sku": {
-        "name": "[parameters('storageAccountSku')]"
-      },
-      "kind": "StorageV2",
-      "location": "[variables('location')]",
-      "properties": {
-        "accessTier": "Hot"
-      }
-    },
     {
       "name": "[variables('functionName')]",
       "type": "Microsoft.Web/sites",
@@ -60,7 +35,7 @@
           "appSettings": [
             {
               "name": "AzureWebJobsStorage",
-              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'), '2019-04-01').keys[0].value)]"
+              "value": "[parameters('storageConnectionString')]"
             },
             {
               "name": "WEBSITE_RUN_FROM_PACKAGE",
@@ -93,10 +68,7 @@
       },
       "identity": {
         "type": "SystemAssigned"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
-      ]
+      }
     }
   ],
   "outputs": {

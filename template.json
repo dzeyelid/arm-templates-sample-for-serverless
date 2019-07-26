@@ -63,9 +63,7 @@
       ]
     }
   },
-  "variables": {
-    "location": "[if(contains(deployment(), 'location'), deployment().location, resourceGroup().location)]"
-  },
+  "variables": {},
   "resources": [
     {
       "name": "sharedResources",
@@ -110,11 +108,11 @@
           "projectName": {
             "value": "[parameters('projectName')]"
           },
-          "storageAccountSku": {
-            "value": "[parameters('storageAccountSku')]"
-          },
           "appServicePlanResourceId": {
             "value": "[reference('sharedResources').outputs.appServicePlanResourceId.value]"
+          },
+          "storageConnectionString": {
+            "value": "[reference('sharedResources').outputs.storageConnectionString.value]"
           },
           "keyVaultName": {
             "value": "[reference('sharedResources').outputs.keyVaultName.value]"
@@ -139,8 +137,14 @@
           "projectName": {
             "value": "[parameters('projectName')]"
           },
-          "sharedResources": {
-            "value": "[reference('sharedResources').outputs]"
+          "appServicePlanResourceId": {
+            "value": "[reference('sharedResources').outputs.appServicePlanResourceId.value]"
+          },
+          "storageConnectionString": {
+            "value": "[reference('sharedResources').outputs.storageConnectionString.value]"
+          },
+          "keyVaultName": {
+            "value": "[reference('sharedResources').outputs.keyVaultName.value]"
           }
         }
       },
@@ -164,6 +168,9 @@
           },
           "setterFunction": {
             "value": "[reference('setterResources').outputs.function.value]"
+          },
+          "getterFunction": {
+            "value": "[reference('getterResources').outputs.function.value]"
           }
         }
       },
