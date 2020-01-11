@@ -8,6 +8,7 @@ servers:
     variables:
       domainOrIpAddress:
         description: Domain or IP address
+        default: example.com
       apiVersion:
         default: v1
   - url: https://{functionName}.azurewebsites.net/api/{apiVersion}
