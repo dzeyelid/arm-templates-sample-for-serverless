@@ -1,0 +1,29 @@
+{
+  "bindings": [
+    {
+      "authLevel": "anonymous",
+      "type": "httpTrigger",
+      "direction": "in",
+      "name": "req",
+      "methods": [
+        "get",
+        "post"
+      ]
+    },
+    {
+      "type": "http",
+      "direction": "out",
+      "name": "res"
+    },
+    {
+      "name": "newTask",
+      "type": "cosmosDB",
+      "databaseName": "service",
+      "collectionName": "tasks",
+      "connectionStringSetting": "cosmosDbConnectionString",
+      "direction": "out",
+      "createIfNotExists": true
+    }
+  ],
+  "scriptFile": "../dist/create/index.js"
+}
