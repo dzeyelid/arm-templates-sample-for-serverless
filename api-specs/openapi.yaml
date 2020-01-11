@@ -3,6 +3,13 @@ info:
   title: Sample APIs
   version: 1.0.0
 servers:
+  - url: http://{domainOrIpAddress}/api/{apiVersion}
+    description: IP address
+    variables:
+      domainOrIpAddress:
+        description: Domain or IP address
+      apiVersion:
+        default: v1
   - url: https://{functionName}.azurewebsites.net/api/{apiVersion}
     description: Azure Functions server
     variables:
