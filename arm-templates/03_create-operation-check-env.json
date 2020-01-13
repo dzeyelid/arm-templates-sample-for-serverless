@@ -133,10 +133,9 @@
     "vmName": "[opeCheck.createName(parameters('prefix'), parameters('service').identifier, '-vm')]",
     "vmNicName": "[opeCheck.createName(parameters('prefix'), parameters('service').identifier, '-vm-nic')]",
     "vmDiskName": "[opeCheck.createName(parameters('prefix'), parameters('service').identifier, '-vm-disk')]",
-    "storageAccountsName": "[concat(parameters('prefix'), uniqueString(concat(resourceGroup().id, parameters('service').identifier)))]",
     "appServicePlanName": "[opeCheck.createName(parameters('prefix'), parameters('service').identifier, '-plan')]",
-    "applicationInsightsName": "[opeCheck.createName(parameters('prefix'), parameters('service').identifier, '-insights')]",
     "webAppName": "[opeCheck.createName(parameters('prefix'), parameters('service').identifier, '-webapp')]",
+    "ipSecurityRestrictionsBasePriority": 300,
     "allowableSubnets": [
       {
         "vnetSubnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), variables('subnetName'))]",
@@ -203,6 +202,46 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Network/networkInterfaces', variables('vmNicName'))]"
+      ]
+    },
+    {
+      "name": "[variables('appServicePlanName')]",
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2019-08-01",
+      "location": "[variables('location')]",
+      "sku": {
+        "name": "[parameters('appServicePlanSku')]",
+        "capacity": 1
+      },
+      "properties": {
+        "name": "[variables('appServicePlanName')]"
+      }
+    },
+    {
+      "name": "[variables('webAppName')]",
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2019-08-01",
+      "location": "[variables('location')]",
+      "kind": "app",
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+        "siteConfig": {
+          "copy": [
+            {
+              "name": "ipSecurityRestrictions",
+              "count": "[length(variables('allowableSubnets'))]",
+              "input": {
+                "vnetSubnetResourceId": "[variables('allowableSubnets')[copyIndex('ipSecurityRestrictions')].vnetSubnetResourceId]",
+                "action": "Allow",
+                "priority": "[add(variables('ipSecurityRestrictionsBasePriority'), copyIndex('ipSecurityRestrictions'))]",
+                "name": "[variables('allowableSubnets')[copyIndex('ipSecurityRestrictions')].name]"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]"
       ]
     }
   ],
