@@ -4,7 +4,7 @@
 
 ![Structure](./docs/images/structure.png)
 
-## Key objectives
+## Key points
 
 ### App service (Azure Functions)
 
@@ -25,8 +25,6 @@
 $RESOURCE_GROUP="<Resource group name>"
 $LOCATION="japaneast"
 
-$PREFIX="<Prefix string with 9 characters>"
-
 $TEMPLATE_URL="https://raw.githubusercontent.com/dzeyelid/arm-templates-sample-for-serverless/master/arm-templates"
 
 az group create `
@@ -37,8 +35,7 @@ az group deployment create `
   --resource-group ${RESOURCE_GROUP} `
   --name entry `
   --template-uri ${TEMPLATE_URL}/00_deploy.json `
-  --parameters `
-    prefix=${PREFIX}
+  --parameters @arm-templates/parameters.json
 ```
 
 ## Getting started with Deploy button

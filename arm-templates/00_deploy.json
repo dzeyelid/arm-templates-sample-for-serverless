@@ -6,6 +6,15 @@
       "type": "string",
       "maxLength": 9
     },
+    "operationCheckVmComputerName": {
+      "type": "string"
+    },
+    "operationCheckVmAdminUsername": {
+      "type": "string"
+    },
+    "operationCheckVmAdminPassword": {
+      "type": "string"
+    },
     "storageAccountsSku": {
       "type": "string",
       "defaultValue": "Standard_LRS",
@@ -18,6 +27,21 @@
         "Premium_ZRS",
         "Standard_GZRS",
         "Standard_RAGZRS"
+      ]
+    },
+    "taskServiceAppServicePlanSku": {
+      "type": "string",
+      "defaultValue": "P1V2",
+      "allowedValues": [
+        "S1",
+        "S2",
+        "S3",
+        "P1",
+        "P2",
+        "P3",
+        "P1V2",
+        "P2V2",
+        "P3V2"
       ]
     }
   },
@@ -120,13 +144,46 @@
       }
     },
     {
+      "name": "createOperationCheckEnv",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[uri(deployment().properties.templateLink.uri, '03_create-operation-check-env.json')]"
+        },
+        "parameters": {
+          "prefix": {
+            "value": "[variables('prefix')]"
+          },
+          "service": {
+            "value": "[variables('operationCheckService')]"
+          },
+          "vmComputerName": {
+            "value": "[parameters('operationCheckVmComputerName')]"
+          },
+          "vmAdminUsername": {
+            "value": "[parameters('operationCheckVmAdminUsername')]"
+          },
+          "vmAdminPassword": {
+            "value": "[parameters('operationCheckVmAdminPassword')]"
+          },
+          "vnetName": {
+            "value": "[reference('createNetwork').outputs.vnetName.value]"
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'createNetwork')]"      ]
+    },
+    {
       "name": "createTaskService",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2019-10-01",
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[uri(deployment().properties.templateLink.uri, '03_create-task-service.json')]"
+          "uri": "[uri(deployment().properties.templateLink.uri, '04_create-task-service.json')]"
         },
         "parameters": {
           "prefix": {
@@ -138,46 +195,24 @@
           "storageAccountsSku": {
             "value": "[parameters('storageAccountsSku')]"
           },
+          "appServicePlanSku": {
+            "value": "[parameters('taskServiceAppServicePlanSku')]"
+          },
           "keyVaultName": {
             "value": "[reference('createSharedResources').outputs.keyVaultName.value]"
           },
           "vnetName": {
             "value": "[reference('createNetwork').outputs.vnetName.value]"
+          },
+          "allowableSubnets": {
+            "value": "[concat(reference('createOperationCheckEnv').outputs.allowableSubnets.value)]"
           }
         }
       },
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', 'createNetwork')]",
-        "[resourceId('Microsoft.Resources/deployments', 'createSharedResources')]"
-      ]
-    },
-    {
-      "name": "createOperationCheckEnv",
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2019-10-01",
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[uri(deployment().properties.templateLink.uri, '04_create-operation-check-env.json')]"
-        },
-        "parameters": {
-          "prefix": {
-            "value": "[variables('prefix')]"
-          },
-          "service": {
-            "value": "[variables('operationCheckService')]"
-          },
-          "vnetName": {
-            "value": "[reference('createNetwork').outputs.vnetName.value]"
-          },
-          "functionName": {
-            "value": "[reference('createTaskService').outputs.functionName.value]"
-          }
-        }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'createNetwork')]",
-        "[resourceId('Microsoft.Resources/deployments', 'createTaskService')]"
+        "[resourceId('Microsoft.Resources/deployments', 'createSharedResources')]",
+        "[resourceId('Microsoft.Resources/deployments', 'createOperationCheckEnv')]"
       ]
     }
   ],

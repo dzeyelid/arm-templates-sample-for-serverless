@@ -43,6 +43,9 @@
     },
     "vnetName": {
       "type": "string"
+    },
+    "allowableSubnets": {
+      "type": "array"
     }
   },
   "variables": {
@@ -56,7 +59,27 @@
     "cosmosDbContainerName": "tasks",
     "cosmosDbContainerPartitionKeyPath": "/userId",
     "secretNameCosmosDbConnectionString": "cosmosDbConnectionString",
-    "delegatedSubnetName": "[parameters('service').identifier]"
+    "delegatedSubnetName": "[parameters('service').identifier]",
+    "ipSecurityRestrictionsBasePriority": 300,
+    "allowableSubnets": [
+      {
+        "vnetSubnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), variables('delegatedSubnetName'))]",
+        "name": "[parameters('service').identifier]"
+      }
+    ],
+    "allAllowableSubnets": "[concat(variables('allowableSubnets'), parameters('allowableSubnets'))]",
+    "copy": [
+      {
+        "name": "ipSecurityRestrictions",
+        "count": "[length(variables('allAllowableSubnets'))]",
+        "input": {
+          "vnetSubnetResourceId": "[variables('allAllowableSubnets')[copyIndex('ipSecurityRestrictions')].vnetSubnetResourceId]",
+          "action": "Allow",
+          "priority": "[add(variables('ipSecurityRestrictionsBasePriority'), copyIndex('ipSecurityRestrictions'))]",
+          "name": "[variables('allAllowableSubnets')[copyIndex('ipSecurityRestrictions')].name]"
+        }
+      }
+    ]
   },
   "resources": [
     {
@@ -194,21 +217,7 @@
               "*"
             ]
           },
-          "ipSecurityRestrictions": [
-            {
-              "vnetSubnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), variables('delegatedSubnetName'))]",
-              "action": "Allow",
-              "priority": 300,
-              "name": "[parameters('service').identifier]"
-            },
-            {
-              "ipAddress": "Any",
-              "action": "Deny",
-              "priority": 2147483647,
-              "name": "Deny all",
-              "description": "Deny all access"
-            }
-          ]
+          "ipSecurityRestrictions": "[variables('ipSecurityRestrictions')]"
         }
       },
       "identity": {
