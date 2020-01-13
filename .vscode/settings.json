@@ -1,5 +1,5 @@
 {
-  "azureFunctions.deploySubpath": "functions",
+  "azureFunctions.deploySubpath": "functions/taskService",
   "azureFunctions.projectLanguage": "TypeScript",
   "azureFunctions.projectRuntime": "~2",
   "debug.internalConsoleOptions": "neverOpen",
