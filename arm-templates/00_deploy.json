@@ -1,0 +1,220 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "prefix": {
+      "type": "string",
+      "maxLength": 9
+    },
+    "operationCheckVmComputerName": {
+      "type": "string"
+    },
+    "operationCheckVmAdminUsername": {
+      "type": "string"
+    },
+    "operationCheckVmAdminPassword": {
+      "type": "string"
+    },
+    "storageAccountsSku": {
+      "type": "string",
+      "defaultValue": "Standard_LRS",
+      "allowedValues": [
+        "Standard_LRS",
+        "Standard_GRS",
+        "Standard_RAGRS",
+        "Standard_ZRS",
+        "Premium_LRS",
+        "Premium_ZRS",
+        "Standard_GZRS",
+        "Standard_RAGZRS"
+      ]
+    },
+    "taskServiceAppServicePlanSku": {
+      "type": "string",
+      "defaultValue": "P1V2",
+      "allowedValues": [
+        "S1",
+        "S2",
+        "S3",
+        "P1",
+        "P2",
+        "P3",
+        "P1V2",
+        "P2V2",
+        "P3V2"
+      ]
+    }
+  },
+  "variables": {
+    "prefix": "[toLower(parameters('prefix'))]",
+    "vnetAddressPrefix": "10.0.0.0/16",
+    "subnetAddressPrefixBastion": "10.0.0.0/24",
+    "taskServiceDelegatedSubnetServices": [
+      "Microsoft.Storage",
+      "Microsoft.AzureCosmosDB",
+      "Microsoft.Web"
+    ],
+    "operationCheckServiceDelegatedSubnetServices": [
+      "Microsoft.Storage",
+      "Microsoft.Web"
+    ],
+    "taskService": {
+      "identifier": "task-service",
+      "subnetAddressPrefix": "10.0.1.0/24",
+      "copy": [
+        {
+          "name": "delegatedSubnetServiceEndpoints",
+          "count": "[length(variables('taskServiceDelegatedSubnetServices'))]",
+          "input": {
+            "service": "[variables('taskServiceDelegatedSubnetServices')[copyIndex('delegatedSubnetServiceEndpoints')]]",
+            "locations": [
+              "*"
+            ]
+          }
+        }
+      ],
+      "delegatedSubnetDelegations": [
+        {
+          "name": "Delegate to app plan",
+          "properties": {
+            "serviceName": "Microsoft.Web/serverFarms"
+          }
+        }
+      ]
+    },
+    "operationCheckService": {
+      "identifier": "operation-check",
+      "subnetAddressPrefix": "10.0.2.0/24",
+      "copy": [
+        {
+          "name": "delegatedSubnetServiceEndpoints",
+          "count": "[length(variables('operationCheckServiceDelegatedSubnetServices'))]",
+          "input": {
+            "service": "[variables('operationCheckServiceDelegatedSubnetServices')[copyIndex('delegatedSubnetServiceEndpoints')]]",
+            "locations": [
+              "*"
+            ]
+          }
+        }
+      ],
+      "delegatedSubnetDelegations": []
+    },
+    "services": "[createArray(variables('taskService'), variables('operationCheckService'))]"
+  },
+  "resources": [
+    {
+      "name": "createNetwork",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[uri(deployment().properties.templateLink.uri, '01_create-network.json')]"
+        },
+        "parameters": {
+          "prefix": {
+            "value": "[variables('prefix')]"
+          },
+          "vnetAddressPrefix": {
+            "value": "[variables('vnetAddressPrefix')]"
+          },
+          "subnetAddressPrefixBastion": {
+            "value": "[variables('subnetAddressPrefixBastion')]"
+          },
+          "services": {
+            "value": "[variables('services')]"
+          }
+        }
+      }
+    },
+    {
+      "name": "createSharedResources",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[uri(deployment().properties.templateLink.uri, '02_create-shared-resources.json')]"
+        },
+        "parameters": {
+          "prefix": {
+            "value": "[parameters('prefix')]"
+          }
+        }
+      }
+    },
+    {
+      "name": "createOperationCheckEnv",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[uri(deployment().properties.templateLink.uri, '03_create-operation-check-env.json')]"
+        },
+        "parameters": {
+          "prefix": {
+            "value": "[variables('prefix')]"
+          },
+          "service": {
+            "value": "[variables('operationCheckService')]"
+          },
+          "vmComputerName": {
+            "value": "[parameters('operationCheckVmComputerName')]"
+          },
+          "vmAdminUsername": {
+            "value": "[parameters('operationCheckVmAdminUsername')]"
+          },
+          "vmAdminPassword": {
+            "value": "[parameters('operationCheckVmAdminPassword')]"
+          },
+          "vnetName": {
+            "value": "[reference('createNetwork').outputs.vnetName.value]"
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'createNetwork')]"      ]
+    },
+    {
+      "name": "createTaskService",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[uri(deployment().properties.templateLink.uri, '04_create-task-service.json')]"
+        },
+        "parameters": {
+          "prefix": {
+            "value": "[variables('prefix')]"
+          },
+          "service": {
+            "value": "[variables('taskService')]"
+          },
+          "storageAccountsSku": {
+            "value": "[parameters('storageAccountsSku')]"
+          },
+          "appServicePlanSku": {
+            "value": "[parameters('taskServiceAppServicePlanSku')]"
+          },
+          "keyVaultName": {
+            "value": "[reference('createSharedResources').outputs.keyVaultName.value]"
+          },
+          "vnetName": {
+            "value": "[reference('createNetwork').outputs.vnetName.value]"
+          },
+          "allowableSubnets": {
+            "value": "[concat(reference('createOperationCheckEnv').outputs.allowableSubnets.value)]"
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'createNetwork')]",
+        "[resourceId('Microsoft.Resources/deployments', 'createSharedResources')]",
+        "[resourceId('Microsoft.Resources/deployments', 'createOperationCheckEnv')]"
+      ]
+    }
+  ],
+  "outputs": {}
+}

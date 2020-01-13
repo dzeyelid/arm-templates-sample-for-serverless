@@ -1,0 +1,318 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "prefix": {
+      "type": "string",
+      "maxLength": 9
+    },
+    "service": {
+      "type": "object"
+    },
+    "storageAccountsSku": {
+      "type": "string",
+      "defaultValue": "Standard_LRS",
+      "allowedValues": [
+        "Standard_LRS",
+        "Standard_GRS",
+        "Standard_RAGRS",
+        "Standard_ZRS",
+        "Premium_LRS",
+        "Premium_ZRS",
+        "Standard_GZRS",
+        "Standard_RAGZRS"
+      ]
+    },
+    "appServicePlanSku": {
+      "type": "string",
+      "defaultValue": "P1V2",
+      "allowedValues": [
+        "S1",
+        "S2",
+        "S3",
+        "P1",
+        "P2",
+        "P3",
+        "P1V2",
+        "P2V2",
+        "P3V2"
+      ]
+    },
+    "keyVaultName": {
+      "type": "string"
+    },
+    "vnetName": {
+      "type": "string"
+    },
+    "allowableSubnets": {
+      "type": "array"
+    }
+  },
+  "variables": {
+    "location": "[resourceGroup().location]",
+    "storageAccountsName": "[concat(parameters('prefix'), uniqueString(concat(resourceGroup().id, parameters('service').identifier)))]",
+    "appServicePlanName": "[taskService.createName(parameters('prefix'), parameters('service').identifier, '-plan')]",
+    "applicationInsightsName": "[taskService.createName(parameters('prefix'), parameters('service').identifier, '-insights')]",
+    "functionName": "[taskService.createName(parameters('prefix'), parameters('service').identifier, '-func')]",
+    "cosmosDbName": "[taskService.createName(parameters('prefix'), parameters('service').identifier, '-cosmos')]",
+    "cosmosDbDatabaseName": "service",
+    "cosmosDbContainerName": "tasks",
+    "cosmosDbContainerPartitionKeyPath": "/userId",
+    "secretNameCosmosDbConnectionString": "cosmosDbConnectionString",
+    "delegatedSubnetName": "[parameters('service').identifier]",
+    "ipSecurityRestrictionsBasePriority": 300,
+    "allowableSubnets": [
+      {
+        "vnetSubnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), variables('delegatedSubnetName'))]",
+        "name": "[parameters('service').identifier]"
+      }
+    ],
+    "allAllowableSubnets": "[concat(variables('allowableSubnets'), parameters('allowableSubnets'))]",
+    "copy": [
+      {
+        "name": "ipSecurityRestrictions",
+        "count": "[length(variables('allAllowableSubnets'))]",
+        "input": {
+          "vnetSubnetResourceId": "[variables('allAllowableSubnets')[copyIndex('ipSecurityRestrictions')].vnetSubnetResourceId]",
+          "action": "Allow",
+          "priority": "[add(variables('ipSecurityRestrictionsBasePriority'), copyIndex('ipSecurityRestrictions'))]",
+          "name": "[variables('allAllowableSubnets')[copyIndex('ipSecurityRestrictions')].name]"
+        }
+      }
+    ]
+  },
+  "resources": [
+    {
+      "name": "[variables('storageAccountsName')]",
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2019-04-01",
+      "location": "[variables('location')]",
+      "sku": {
+        "name": "[parameters('storageAccountsSku')]"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "networkAcls": {
+          "defaultAction": "Deny",
+          "virtualNetworkRules": [
+            {
+              "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), variables('delegatedSubnetName'))]",
+              "action": "Allow"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "[variables('appServicePlanName')]",
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2019-08-01",
+      "location": "[variables('location')]",
+      "sku": {
+        "name": "[parameters('appServicePlanSku')]",
+        "capacity": 1
+      },
+      "properties": {
+        "name": "[variables('appServicePlanName')]"
+      }
+    },
+    {
+      "name": "[variables('applicationInsightsName')]",
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2015-05-01",
+      "location": "[variables('location')]",
+      "tags": {
+        "[concat('hidden-link:', resourceId('Microsoft.Web/sites', variables('functionName')))]": "Resource"
+      },
+      "kind": "web",
+      "properties": {
+        "Application_Type": "web",
+        "ApplicationId": "[variables('applicationInsightsName')]"
+      }
+    },
+    {
+      "name": "[variables('cosmosDbName')]",
+      "type": "Microsoft.DocumentDB/databaseAccounts",
+      "apiVersion": "2019-08-01",
+      "location": "[variables('location')]",
+      "kind": "GlobalDocumentDB",
+      "properties": {
+        "locations": [
+          {
+            "locationName": "[variables('location')]"
+          }
+        ],
+        "databaseAccountOfferType": "Standard",
+        "isVirtualNetworkFilterEnabled": true,
+        "virtualNetworkRules": [
+          {
+            "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), variables('delegatedSubnetName'))]",
+            "ignoreMissingVNetServiceEndpoint": false
+          }
+        ]
+      },
+      "resources": [
+        {
+          "name": "[variables('cosmosDbDatabaseName')]",
+          "type": "sqlDatabases",
+          "apiVersion": "2019-08-01",
+          "location": "[variables('location')]",
+          "properties": {
+            "resource": {
+              "id": "[variables('cosmosDbDatabaseName')]"
+            },
+            "options": {}
+          },
+          "dependsOn": [
+            "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosDbName'))]"
+          ],
+          "resources": [
+            {
+              "name": "[variables('cosmosDbContainerName')]",
+              "type": "containers",
+              "apiVersion": "2019-08-01",
+              "location": "[variables('location')]",
+              "properties": {
+                "resource": {
+                  "id": "[variables('cosmosDbContainerName')]",
+                  "partitionKey": {
+                    "paths": [
+                      "[variables('cosmosDbContainerPartitionKeyPath')]"
+                    ]
+                  }
+                },
+                "options": {}
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosDbName'), variables('cosmosDbDatabaseName'))]"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "[concat(parameters('keyVaultName'), '/', variables('secretNameCosmosDbConnectionString'))]",
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2018-02-14",
+      "properties": {
+        "value": "[concat('AccountEndpoint=', reference(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosDbName'))).documentEndpoint, ';AccountKey=', listKeys(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosDbName')), '2015-04-08').primaryMasterKey)]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosDbName'))]"
+      ]
+    },
+    {
+      "name": "[variables('functionName')]",
+      "apiVersion": "2019-08-01",
+      "type": "Microsoft.Web/sites",
+      "location": "[variables('location')]",
+      "kind": "functionapp",
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+        "siteConfig": {
+          "alwaysOn": true,
+          "cors": {
+            "allowedOrigins": [
+              "*"
+            ]
+          },
+          "ipSecurityRestrictions": "[variables('ipSecurityRestrictions')]"
+        }
+      },
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "resources": [
+        {
+          "name": "virtualNetwork",
+          "type": "config",
+          "apiVersion": "2018-02-01",
+          "properties": {
+            "subnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), variables('delegatedSubnetName'))]",
+            "swiftSupported": true
+          },
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/sites', variables('functionName'))]"
+          ]
+        }
+      ],
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountsName'))]"
+      ]
+    },
+    {
+      "name": "[concat(parameters('keyVaultName'), '/add')]",
+      "type": "Microsoft.KeyVault/vaults/accessPolicies",
+      "apiVersion": "2018-02-14",
+      "properties": {
+        "accessPolicies": [
+          {
+            "tenantId": "[reference(resourceId('Microsoft.Web/sites', variables('functionName')), '2019-08-01', 'Full').identity.tenantId]",
+            "objectId": "[reference(resourceId('Microsoft.Web/sites', variables('functionName')), '2019-08-01', 'Full').identity.principalId]",
+            "permissions": {
+              "secrets": [
+                "get"
+              ]
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('functionName'))]"
+      ]
+    },
+    {
+      "name": "[concat(variables('functionName'), '/appsettings')]",
+      "type": "Microsoft.Web/sites/config",
+      "apiVersion": "2019-08-01",
+      "properties": {
+        "AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountsName'), ';AccountKey=', listKeys(variables('storageAccountsName'),'2018-07-01').keys[0].value)]",
+        "FUNCTIONS_EXTENSION_VERSION": "~2",
+        "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(resourceId('Microsoft.Insights/components', variables('applicationInsightsName')), '2015-05-01').InstrumentationKey]",
+        "FUNCTIONS_WORKER_RUNTIME": "node",
+        "WEBSITE_NODE_DEFAULT_VERSION": "~12",
+        "cosmosDbConnectionString": "[concat('@Microsoft.KeyVault(SecretUri=', reference(resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), variables('secretNameCosmosDbConnectionString'))).secretUriWithVersion, ')')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults/accessPolicies', parameters('keyVaultName'), 'add')]",
+        "[resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), variables('secretNameCosmosDbConnectionString'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountsName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "functionName": {
+      "type": "string",
+      "value": "[variables('functionName')]"
+    }
+  },
+  "functions": [
+    {
+      "namespace": "taskService",
+      "members": {
+        "createName": {
+          "parameters": [
+            {
+              "name": "prefix",
+              "type": "string"
+            },
+            {
+              "name": "serviceIdentifier",
+              "type": "string"
+            },
+            {
+              "name": "suffix",
+              "type": "string"
+            }
+          ],
+          "output": {
+            "type": "string",
+            "value": "[concat(parameters('prefix'), '-', parameters('serviceIdentifier'), parameters('suffix'))]"
+          }
+        }
+      }
+    }
+  ]
+}

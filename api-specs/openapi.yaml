@@ -1,0 +1,121 @@
+openapi: 3.0.2
+info:
+  title: Sample APIs
+  version: 1.0.0
+servers:
+  - url: http://{domainOrIpAddress}/api/{apiVersion}
+    description: IP address
+    variables:
+      domainOrIpAddress:
+        description: Domain or IP address
+        default: example.com
+      apiVersion:
+        default: v1
+  - url: https://{functionName}.azurewebsites.net/api/{apiVersion}
+    description: Azure Functions server
+    variables:
+      functionName:
+        description: Azure function's name
+        default: sample
+      apiVersion:
+        default: v1
+  - url: http://localhost:7071/api/{apiVersion}
+    description: Local server
+    variables:
+      apiVersion:
+        default: v1
+paths:
+  /{userId}/tasks:
+    get:
+      parameters:
+        - $ref: '#/components/parameters/userId'
+      responses:
+        200:
+          $ref: '#/components/responses/listedTasksSuccessfully'
+    post:
+      parameters:
+        - $ref: '#/components/parameters/userId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/createTask'
+      responses:
+        201:
+          description: Successfully creation
+        500:
+          $ref: '#/components/responses/internalServerError'
+components:
+  schemas:
+    createTask:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+        dueDate:
+          type: string
+          format: date-time
+    task:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        dueDate:
+          type: string
+          format: date-time
+  parameters:
+    userId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    listedTasksSuccessfully:
+      description: Successfully operation
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                default: true
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/task'
+    createdTaskSuccessfully:
+      description: Successfully creation
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                default: true
+              data:
+                $ref: '#/components/schemas/task'
+    internalServerError:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              statusCode:
+                type: number
+                example: 500
+              message:
+                type: string
+                example: Internal server error
+              activityId:
+                type: string
+                format: uuid

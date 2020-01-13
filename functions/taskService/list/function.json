@@ -1,0 +1,28 @@
+{
+  "bindings": [
+    {
+      "authLevel": "anonymous",
+      "type": "httpTrigger",
+      "direction": "in",
+      "name": "req",
+      "methods": [
+        "get"
+      ]
+    },
+    {
+      "type": "http",
+      "direction": "out",
+      "name": "res"
+    },
+    {
+      "name": "tasks",
+      "type": "cosmosDB",
+      "databaseName": "service",
+      "collectionName": "tasks",
+      "connectionStringSetting": "cosmosDbConnectionString",
+      "direction": "in",
+      "sqlQuery": "SELECT * from c where c.userId = {userId}"
+    }
+  ],
+  "scriptFile": "../dist/list/index.js"
+}
