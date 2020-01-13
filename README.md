@@ -38,6 +38,23 @@ az group deployment create `
   --parameters @arm-templates/parameters.json
 ```
 
+To deploy swagger UI application to check operation, refer below.
+
+```powershell
+$PREFIX="<Your prefix string>"
+
+cd api-specs/host-swagger-ui
+npm install
+npm run build
+
+cd build
+az webapp up `
+  --resource-group ${RESOURCE_GROUP} `
+  --plan ${PREFIX}-operation-check-plan `
+  --name ${PREFIX}-operation-check-webapp `
+  --html
+```
+
 ## Getting started with Deploy button
 
 Click me! :)
