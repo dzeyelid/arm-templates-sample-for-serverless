@@ -27,7 +27,7 @@ $LOCATION="japaneast"
 
 $PREFIX="<Prefix string with 9 characters>"
 
-$TEMPLATE_URL="https://github.com/dzeyelid/arm-templates-sample-for-serverless/blob/master/arm-templates"
+$TEMPLATE_URL="https://raw.githubusercontent.com/dzeyelid/arm-templates-sample-for-serverless/master/arm-templates"
 
 az group create `
   --name ${RESOURCE_GROUP} `
